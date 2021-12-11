@@ -39,8 +39,9 @@ import re
 # constituents.to_csv('constituents.csv')
 constituents = pd.read_csv('constituents.csv')
 constituents.set_index("date", inplace=True)
-constituents.head()
-pprint(constituents)
+constituents.sort_index()
+# constituents.head()
+# pprint(constituents)
 
 wiki = pd.read_csv("WIKI_PRICES.csv", parse_dates=True)
 wiki = dict(tuple(wiki.groupby("ticker")))
@@ -138,18 +139,19 @@ for i in range(0, len(constituents) - 1):
     company_list = constituents.loc[constituents.index[i], 'companys']
     company_list = ast.literal_eval(company_list)
 
+    pprint(company_list)
 
     for company in company_list:
         pass
         if company in skips:
             continue
-        df = quandl_data(wiki, company[0], start, end)
-    #     # if df is None:
-    #     #     df = yahoo_data(company[0], start, end)
-    #     if df is None:
-    #         skips.add(company)
-    #         continue
-    #     if company[0] in data:
-    #         data[company[0]] = data[company[0]].append(df)
-    #     else:
-    #         data[company[0]] = df
+        df = quandl_data(wiki, company, start, end)
+        # if df is None:
+        #     df = yahoo_data(company[0], start, end)
+        if df is None:
+            skips.add(company)
+            continue
+        if company in data:
+            data[company] = data[company].append(df)
+        else:
+            data[company] = df

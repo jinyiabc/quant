@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from pprint import pprint
 
 import pandas as pd
 import pandas_datareader.data as web
@@ -146,38 +147,66 @@ def main():
     skips = set()
 
     # constituents = get_constituents()["2013-02-28":"2018-02-28"]
-    constituents = pd.read_csv('constituents.csv')
+    constituents = pd.read_csv('C:\\work\\quant\\survivorship-free\\constituents.csv')
     constituents.set_index("date", inplace=True)
+    old_index = constituents.index[:]
+    new_index = pd.DatetimeIndex(old_index)
+    constituents['new_date'] = new_index
+    constituents.set_index("new_date", inplace=True)
+    constituents = constituents.sort_index()
     import ast
     for i in range(0, len(constituents) - 1):
-        start = datetime.strptime(constituents.index[i], '%Y-%m-%d')
-        end = datetime.strptime(constituents.index[i + 1], '%Y-%m-%d') - timedelta(days=1)
+        start = constituents.index[i]
+        end = constituents.index[i+1] - pd.DateOffset(1)
         start = str(start.date())  # '1981-9-27'
         end = str(end.date())
+        # print(start, end)
         company_list = constituents.loc[constituents.index[i], 'companys']
         company_list = ast.literal_eval(company_list)
-
         for company in company_list:
             if company in skips:
                 continue
-            df = quandl_data(wiki, company[0], start, end)
+            df = quandl_data(wiki, company, start, end)
             if df is None:
-                df = yahoo_data(company[0], start, end)
+                df = yahoo_data(company, start, end)
             if df is None:
                 skips.add(company)
                 continue
-            if company[0] in data:
-                data[company[0]] = data[company[0]].append(df)
+            if company in data:
+                data[company] = data[company].append(df)
             else:
-                data[company[0]] = df
+                data[company] = df
 
     for ticker, df in data.items():
         df = df.reset_index().drop_duplicates(subset="date").set_index("date")
         df.to_csv(f"data/{fix_ticker(ticker)}.csv")
         data[ticker] = df
     tickers = [fix_ticker(ticker) for ticker in data.keys()]
-    pd.Series(tickers, dtype='str').to_csv("data/tickers.csv")
+    pd.Series(tickers, dtype='str').to_csv("tickers.csv")
 
+    sim_rsp = (
+        (pd.concat(
+            [pd.read_csv(f"data/{ticker}.csv", index_col='date', parse_dates=True)[
+                'close'
+            ].pct_change()
+            for ticker in tickers],
+            axis=1,
+            sort=True,
+        ).mean(axis=1, skipna=True) + 1)
+        .cumprod()
+        .rename("SIM")
+    )
+
+    rsp = (
+        (web.DataReader("RSP", "yahoo", sim_rsp.index[0], sim_rsp.index[-1])[
+            "Adj Close"
+        ].pct_change() + 0.002 / 252 + 1)  # 0.20% annual ER
+        .cumprod()
+        .rename("RSP")
+    )
+
+    sim_rsp.plot(legend=True, title="RSP vs. Un-Survivorship-Biased Strategy", figsize=(12, 9))
+    rsp.plot(legend=True)
 
 if __name__ == "__main__":
     main()
