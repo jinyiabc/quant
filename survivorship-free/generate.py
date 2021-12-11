@@ -13,16 +13,16 @@ import re
 def get_constituents():
     # request page
     html = requests.get("https://www.ishares.com/us/products/239726/#tabsAll").content
-    soup = BeautifulSoup(html)
+    soup = BeautifulSoup(html, features="lxml")
 
     # find available dates
     holdings = soup.find("div", {"id": "holdings"})
-    dates_div = holdings.find_all("div", "component-date-list")[1]
+    dates_div = holdings.find_all("div", "component-date-list")[0]
     dates_div.find_all("option")
     dates = [option.attrs["value"] for option in dates_div.find_all("option")]
 
     # download constituents for each date
-    constituents = pd.Series()
+    constituents = pd.Series(dtype='float64')
     for date in dates:
         resp = requests.get(
             f"https://www.ishares.com/us/products/239726/ishares-core-sp-500-etf/1467271812596.ajax?tab=all&fileType=json&asOfDate={date}"
@@ -145,14 +145,19 @@ def main():
     data = {}
     skips = set()
 
-    constituents = get_constituents()["2013-02-28":"2018-02-28"]
-
+    # constituents = get_constituents()["2013-02-28":"2018-02-28"]
+    constituents = pd.read_csv('constituents.csv')
+    constituents.set_index("date", inplace=True)
+    import ast
     for i in range(0, len(constituents) - 1):
-        start = str(constituents.index[i].date())
-        end = str(
-            (constituents.index[i + 1].to_pydatetime() - timedelta(days=1)).date()
-        )
-        for company in constituents[i]:
+        start = datetime.strptime(constituents.index[i], '%Y-%m-%d')
+        end = datetime.strptime(constituents.index[i + 1], '%Y-%m-%d') - timedelta(days=1)
+        start = str(start.date())  # '1981-9-27'
+        end = str(end.date())
+        company_list = constituents.loc[constituents.index[i], 'companys']
+        company_list = ast.literal_eval(company_list)
+
+        for company in company_list:
             if company in skips:
                 continue
             df = quandl_data(wiki, company[0], start, end)
@@ -171,7 +176,7 @@ def main():
         df.to_csv(f"data/{fix_ticker(ticker)}.csv")
         data[ticker] = df
     tickers = [fix_ticker(ticker) for ticker in data.keys()]
-    pd.Series(tickers).to_csv("data/tickers.csv")
+    pd.Series(tickers, dtype='str').to_csv("data/tickers.csv")
 
 
 if __name__ == "__main__":
