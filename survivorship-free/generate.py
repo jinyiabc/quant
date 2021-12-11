@@ -182,7 +182,7 @@ def main():
         df.to_csv(f"data/{fix_ticker(ticker)}.csv")
         data[ticker] = df
     tickers = [fix_ticker(ticker) for ticker in data.keys()]
-    pd.Series(tickers, dtype='str').to_csv("tickers.csv")
+    pd.Series(tickers, dtype='str').to_csv("tickers.csv", header=['ticker'])
 
     sim_rsp = (
         (pd.concat(

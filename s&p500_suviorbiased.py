@@ -8,8 +8,8 @@ import matplotlib
 import pandas as pd
 import pandas_datareader.data as web
 import matplotlib.pyplot as plt
-import matplotlib
-matplotlib.use('TKAgg')
+# import matplotlib
+# matplotlib.use('TKAgg')
 
 os.environ["IEX_API_KEY"] = 'pk_e4925667bcc14b549bb491a2dc08836a'
 def main():
@@ -179,7 +179,7 @@ def main1():
         #     data[company] = data[company].append(df)
         # else:
         #     data[company] = df
-    pd.DataFrame(skips).to_csv('spy/skips.csv')
+    pd.DataFrame(skips).to_csv('spy/skips.csv', header=['ticker'])
 
 if __name__ == "__main__":
     main()

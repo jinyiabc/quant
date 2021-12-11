@@ -6,8 +6,8 @@ import matplotlib
 import pandas as pd
 import pandas_datareader.data as web
 import matplotlib.pyplot as plt
-import matplotlib
-matplotlib.use('TKAgg')
+# import matplotlib
+# matplotlib.use('TKAgg')
 
 def main():
     df = pd.read_csv('survivorship-free/tickers.csv')
